@@ -3,6 +3,7 @@
 API theo doi giao dich MBBank theo thoi gian thuc.
 
 Project nay chi giu backend API, khong con giao dien web/static.
+Neu ban chi upload rieng noi dung thu muc nay len GitHub/Render thi chay truc tiep tu root project.
 
 ## Chuan bi
 
@@ -10,7 +11,7 @@ Project nay chi giu backend API, khong con giao dien web/static.
 2. Cai dependency:
 
 ```bash
-pip install -r bank_monitor_web/requirements.txt
+pip install -r requirements.txt
 ```
 
 Dependency se tu cai `mbbank-lib` tu PyPI, khong can giu source repo `mbbank` de import.
@@ -18,7 +19,7 @@ Dependency se tu cai `mbbank-lib` tu PyPI, khong can giu source repo `mbbank` de
 ## Chay
 
 ```bash
-python -m bank_monitor_web.app
+uvicorn app:app --host 0.0.0.0 --port $PORT
 ```
 
 Endpoint chinh:
@@ -33,7 +34,7 @@ Neu thieu `stk`, API se tra `400`.
 
 ## Tach rieng du an nay
 
-Neu muon mang app nay sang may khac, chi can copy thu muc `bank_monitor_web`, tao virtualenv moi, cai:
+Neu muon mang app nay sang may khac, chi can copy noi dung thu muc nay, tao virtualenv moi, cai:
 
 ```bash
 pip install -r requirements.txt
@@ -42,5 +43,5 @@ pip install -r requirements.txt
 roi chay:
 
 ```bash
-python -m bank_monitor_web.app
+uvicorn app:app --host 0.0.0.0 --port $PORT
 ```
