@@ -1,8 +1,8 @@
-# Bank Monitor Web
+# Bank Monitor API
 
-Website theo doi giao dich MBBank theo thoi gian thuc.
+API theo doi giao dich MBBank theo thoi gian thuc.
 
-Project nay co the chay doc lap, chi can thu muc `bank_monitor_web` va cac goi pip trong `requirements.txt`.
+Project nay chi giu backend API, khong con giao dien web/static.
 
 ## Chuan bi
 
@@ -21,24 +21,15 @@ Dependency se tu cai `mbbank-lib` tu PyPI, khong can giu source repo `mbbank` de
 python -m bank_monitor_web.app
 ```
 
-Trang web mac dinh:
+Endpoint chinh:
 
 ```text
-http://127.0.0.1:8000
+GET /api/bank?stk=066668683
 ```
 
-API xem giao dich:
+Trang `/` tra ve rong de service van bind port tren Render.
 
-```text
-/api/bank?123456789
-```
-
-Ho tro them cac dang query:
-
-```text
-/api/bank?account=123456789
-/api/bank?stk=123456789
-```
+Neu thieu `stk`, API se tra `400`.
 
 ## Tach rieng du an nay
 

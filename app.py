@@ -8,9 +8,7 @@ from typing import Any
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
+from fastapi.responses import PlainTextResponse
 import mbbank
 import uvicorn
 
@@ -30,14 +28,9 @@ def parse_decimal(value: str | None) -> Decimal:
 
 
 def normalize_account_query(request: Request) -> str | None:
-    raw_query = request.url.query.strip()
-    if raw_query and "=" not in raw_query:
-        return raw_query
-
-    for key in ("account", "stk", "account_no"):
-        value = request.query_params.get(key)
-        if value:
-            return value.strip()
+    value = request.query_params.get("stk")
+    if value:
+        return value.strip()
     return None
 
 
@@ -57,7 +50,6 @@ class TransactionScanner:
         self.running = False
         self.last_refresh: str | None = None
         self.last_error: str | None = None
-        self.accounts: list[dict[str, Any]] = []
         self.default_account: str | None = None
         self.transactions: dict[str, list[dict[str, Any]]] = {}
 
@@ -87,23 +79,14 @@ class TransactionScanner:
 
     def refresh(self) -> None:
         balance_info = self.client.getBalance()
-        accounts = [
-            {
-                "acctNo": account.acctNo,
-                "acctAlias": account.acctAlias,
-                "acctNm": account.acctNm,
-                "currentBalance": account.currentBalance,
-            }
-            for account in balance_info.acct_list
-        ]
-        default_account = accounts[0]["acctNo"] if accounts else None
+        account_numbers = [account.acctNo for account in balance_info.acct_list]
+        default_account = account_numbers[0] if account_numbers else None
 
         to_date = datetime.datetime.now()
         from_date = to_date - datetime.timedelta(days=self.lookback_days)
 
         refreshed_transactions: dict[str, list[dict[str, Any]]] = {}
-        for account in accounts:
-            account_no = account["acctNo"]
+        for account_no in account_numbers:
             history = self.client.getTransactionAccountHistory(
                 accountNo=account_no,
                 from_date=from_date,
@@ -120,7 +103,6 @@ class TransactionScanner:
             refreshed_transactions[account_no] = items
 
         with self.lock:
-            self.accounts = accounts
             self.default_account = default_account
             self.transactions = refreshed_transactions
             self.last_error = None
@@ -155,21 +137,11 @@ class TransactionScanner:
             "amount": str(amount),
         }
 
-    def get_accounts(self) -> dict[str, Any]:
-        with self.lock:
-            return {
-                "running": self.running,
-                "last_refresh": self.last_refresh,
-                "last_error": self.last_error,
-                "default_account": self.default_account,
-                "accounts": list(self.accounts),
-            }
-
     def get_transactions(self, account_no: str | None) -> dict[str, Any]:
         with self.lock:
-            target = account_no or self.default_account
+            target = account_no
             if not target:
-                raise HTTPException(status_code=404, detail="No account available")
+                raise HTTPException(status_code=400, detail="Missing required query parameter: stk")
 
             if target not in self.transactions:
                 raise HTTPException(
@@ -181,7 +153,6 @@ class TransactionScanner:
                 "scanner_running": self.running,
                 "last_refresh": self.last_refresh,
                 "last_error": self.last_error,
-                "default_account": self.default_account,
                 "account": target,
                 "transactions": list(self.transactions[target]),
             }
@@ -204,31 +175,26 @@ async def lifespan(_: FastAPI):
     scanner.stop()
 
 
-app = FastAPI(title="MBBank Transaction Monitor", lifespan=lifespan)
-app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
-templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+app = FastAPI(title="MBBank Transaction Monitor API", lifespan=lifespan)
 
 
-@app.get("/", response_class=HTMLResponse)
-async def index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
-
-
-@app.get("/api/accounts")
-async def api_accounts():
-    return get_scanner().get_accounts()
+@app.get("/", response_class=PlainTextResponse)
+async def index():
+    return ""
 
 
 @app.get("/api/bank")
 async def api_bank(request: Request):
     account_no = normalize_account_query(request)
+    if not account_no:
+        raise HTTPException(status_code=400, detail="Missing required query parameter: stk")
     return get_scanner().get_transactions(account_no)
 
 
 def main() -> None:
     host = os.getenv("MBBANK_HOST", "0.0.0.0")
     port = int(os.getenv("PORT", os.getenv("MBBANK_PORT", "8000")))
-    uvicorn.run("app:app", host="0.0.0.0", port=port, reload=False)
+    uvicorn.run("app:app", host=host, port=port, reload=False)
 
 
 if __name__ == "__main__":
