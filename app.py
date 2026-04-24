@@ -228,7 +228,7 @@ async def api_bank(request: Request):
 def main() -> None:
     host = os.getenv("MBBANK_HOST", "0.0.0.0")
     port = int(os.getenv("PORT", os.getenv("MBBANK_PORT", "8000")))
-    uvicorn.run("bank_monitor_web.app:app", host=host, port=port, reload=False)
+    uvicorn.run("app:app", host="0.0.0.0", port=port, reload=False)
 
 
 if __name__ == "__main__":
