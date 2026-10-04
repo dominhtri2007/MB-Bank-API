@@ -1,0 +1,12 @@
+node_modules/
+.env
+*.log
+dist/
+.DS_Store
+Thumbs.db
+
+# Local artifacts; do not publish to the source repository.
+model.onnx
+mb-api.zip
+.smoke-out.log
+
